@@ -1,1 +1,1 @@
-# PathGTP
+# PathGPT
