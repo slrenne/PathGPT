@@ -7,81 +7,50 @@ library(rethinking)
 # let's simulate the fields
 # some fields  will be more covered
 # in the trainig set of chatGPT, 
-N <- 1e5 
-Fmax <- 5L
-
-# the knowledge K of chatGPT will be therefore different for the different topics
-# K will be a latent variable
-Kbar <- rnorm(N)
-# we will create 10 different knowledges related to the field
-
-K <- matrix( ncol = Fmax , nrow = N)
-
-for (i in 1 : Fmax) {
-    for (j in 1 : N) {
-      m <- i - 5 + Kbar[j]
-      K[j,i] <- rnorm( 1, m /2 )
-    }}
+N <- 200 # total number of anwers
+f <- 10L # different fields
+S <- 50L # different scenarios
+Qt <- 2L # max number of question types
+Ref <- 2L # type of reference (with or without)
+Pa <- 4L # number of pathologists
+a0<- (-2) #alpha coefficient
 
 
-Title <- "Maximum knowledge differences among Fields"
-plot(NULL, 
-     xlim = c(-6,6),
-     ylim = c(0,0.35),
-     main = Title,
-     xlab = "knowledge", 
-     ylab = "Density")
-abline(v = 0, lty = 2)
-dens(K[,1], lwd = 3, main = Title, add = TRUE)
-dens(K[,Fmax], add = TRUE, lwd = 3, col = 2)
-dens(K[,Fmax] - K[,1], add = TRUE, lwd = 3, col = 3, show.HPDI = 0.89)
-legend('topright', lwd = 3, col = 1:3, 
-       legend = c('lowest',
-                  'highest',
-                  'contrast'))
+# let's start simulating the answers
 
-# with the clinical scenario and the prompting strategy (open ended/ multiple choice
-# and with or without references) we elicits different answers
+A <- expand.grid(1:S, 1:Qt, 1:Ref) # combine the three variables
+A <- data.frame(A) #makes a df
+colnames(A) <- c('S', 'Qt', 'Ref') # retitle the column names
+A$f <- as.integer( trunc((A$S - 1)/5) + 1 ) # create also the fields
 
+K <- rnorm(f) # knowledge simulated for each field
+bS <- rnorm(S) # the effect of each scenario
+P_coeff <- matrix(c(1,2,3,4), ncol =  2) # Prompt coefficient
+P <- vector(length = N) # Prompt
+for( i in 1 : N) P[i] <- P_coeff [A$Qt[i],A$Ref[i]]
+aA <- rnorm(N, K[A$f] + P + bS[A$S]) # simulate the answer
 
+# Now let's simulate the pathologists evaluation.
+# simulate the pathologists' affinity to the field
+Pa_f <- matrix(
+  replicate(Pa, 
+            sample((1:f - 5)/2, size = f, replace = FALSE)),
+  ncol = 4
+)
 
-
-
- 
-
-
-a_bar <- rnorm( N , 0 , 1.5 )
-sigma_A <- rexp( N, 1 )
-sigma_B <- rexp( N , 1 )
-
-
-# block interactions
-mBT <- ulam(
-    alist(
-        H ~ bernoulli( p ) ,
-        logit(p) <- b[S,R] + a[T],
-      ## adaptive priors
-        matrix[S,R]:b ~ dnorm( 0 , sigma_B ),
-        a[T] ~ dnorm( a_bar , sigma_A ),
-      ## hyper-priors
-        a_bar ~ dnorm( 0 , 1.5 ),
-        sigma_A ~ dexp(1),
-        sigma_B ~ dexp(1)
-    ) , data=dat , chains=4 , cores=4 )
-
-mBTnc <- ulam(
-    alist(
-        P ~ bernoulli( p ) ,
-        logit(p) <- a_bar + z_a[T]*sigma_A + z_b[S,R]*sigma_B ,
-      ## adaptive priors
-        matrix[S,R]:z_b ~ dnorm( 0 , 1 ),
-        z_a[T] ~ dnorm( 0 , 1 ),
-      ## hyper-priors
-        a_bar ~ dnorm( 0 , 1.5 ),
-        sigma_A ~ dexp(1),
-        sigma_B ~ dexp(1),
-        gq> vector[T]:a <<- a_bar + z_a*sigma_A,
-        gq> matrix[S,R]:b <<- z_b*sigma_B
-    ) , data=dat , chains=4 , cores=4 )
-
-summary(K)
+ N * Pa # total number of evaluations
+Pa_coeff <- rnorm(Pa)
+Ev <- data.frame(expand.grid(1:N,1:Pa))
+mu <- vector(length = nrow((Ev)))
+for (i in 1 : nrow(Ev)) {
+  mu[i] <- aA[Ev[i,1]] + Pa_coeff[Ev[i,2]] - 2
+}
+# simulating usefulness
+p <- inv_logit(mu)
+U <- rbern(nrow(Ev), p)
+hist(U)
+# simulating number of errors
+lambda <- exp(- mu)
+E <- rpois(nrow(Ev), lambda)
+dens(E)
+plot(U,E)
