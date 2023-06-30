@@ -27,14 +27,19 @@ parameters{
     cholesky_factor_corr[l_f] L_Rho_u_P;
 }
 transformed parameters{
-    vector[l_A] mu;
+    vector[l_A] mu; // common model to estimate K
     mu =  beta_K[f]*sigma_K + gamma[Pr]*sigma_Pr + delta[S]*sigma_S;
+
     matrix[4,l_f] beta_PF;
-    vector[l_A] p;
     beta_PF = (diag_pre_multiply(sigma_u_P, L_Rho_u_P) * z_u_P)';
+
+    // model for usefulness
+    vector[l_A] p;
     for(i in 1:l_A) {
       p[i] = alpha_u + mu[i] + beta_PF[P[i], f[i]];
     }
+
+    // model for errors
     vector[l_A] lambda;
     for(i in 1:l_A) {
       lambda[i] = - 1 * alpha_e + mu[i] + beta_PF[P[i], f[i]];
