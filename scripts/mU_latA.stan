@@ -47,15 +47,23 @@ transformed parameters{
 }
 model{
     L_Rho_u_P ~ lkj_corr_cholesky( 2 );
+
+    // hyperpriors of sigma
     sigma_u_P ~ exponential( 0.5 );
     sigma_S ~ exponential( 0.5 );
     sigma_Pr ~ exponential( 0.5 );
     sigma_K ~ exponential( 0.5 );
+    
+    // hyperpriors expressed as 'z-scores'
     beta_K ~ normal( 0 , 0.5 );
     delta ~ normal( 0 , 0.5 );
     gamma ~ normal( 0 , 0.5 );
+
+    // priors for the intercepts 
     alpha_u ~ normal( 0 , 0.5 );  
     alpha_e ~ normal( 0 , 0.5 );
+
+    // models
     U ~ bernoulli_logit( p );
     E ~ poisson_log( lambda );
 }
