@@ -25,7 +25,8 @@ A$f <- as.integer( trunc((A$S - 1)/5) + 1 ) # create also the fields
 
 K <- rnorm(f) # knowledge simulated for each field
 bS <- rnorm(S) # the effect of each scenario
-P_coeff <- matrix(c(1,2,3,4), ncol =  2) # Prompt coefficient
+P_coeff <- rnorm(4)
+P_coeff <- matrix(P_coeff, ncol =  2) # Prompt coefficient
 P <- vector(length = N) # Prompt
 for( i in 1 : N) P[i] <- P_coeff [A$Qt[i],A$Ref[i]]
 aA <- rnorm(N, K[A$f] + P + bS[A$S]) # simulate the answer
@@ -34,23 +35,33 @@ aA <- rnorm(N, K[A$f] + P + bS[A$S]) # simulate the answer
 # simulate the pathologists' affinity to the field
 Pa_f <- matrix(
   replicate(Pa, 
-            sample((1:f - 5)/2, size = f, replace = FALSE)),
+            sample((1:f - 5)/6, size = f, replace = FALSE)),
   ncol = 4
 )
 
- N * Pa # total number of evaluations
-Pa_coeff <- rnorm(Pa)
+N * Pa # total number of evaluations
 Ev <- data.frame(expand.grid(1:N,1:Pa))
+Ev[,3] <- rep(A$f, 4)  # field ID  
 mu <- vector(length = nrow((Ev)))
 for (i in 1 : nrow(Ev)) {
-  mu[i] <- aA[Ev[i,1]] + Pa_coeff[Ev[i,2]] - 2
+  mu[i] <- aA[Ev[i,1]] + Pa_f[  Ev[i,3], Ev[i,2]]
 }
 # simulating usefulness
 p <- inv_logit(mu)
 U <- rbern(nrow(Ev), p)
 hist(U)
 # simulating number of errors
-lambda <- exp(- mu)
+lambda <- exp(- 0.6 * mu)
 E <- rpois(nrow(Ev), lambda)
 dens(E)
 plot(U,E)
+
+# plotting relationship between knowledge and usefulness
+oaA <- order(aA)
+plot(aA[oaA], col = U[oaA] + 3, pch = 16, 
+     xlab = 'Answers', 
+     ylab = 'Latent knowlwdge elicited')
+legend('topleft', pch = 16, col = c(3,4), 
+       legend = c('not useful', 'useful'), 
+       title = 'Evaluation')
+

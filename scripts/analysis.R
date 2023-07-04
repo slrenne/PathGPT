@@ -1,9 +1,6 @@
 # set seed
 set.seed(230628)
 
-# library
-library(rethinking)
-
 # analysis
 # let's create a vector for the promting strategy
 Pr <-  as.factor(paste(A$Qt,A$Ref))
@@ -21,47 +18,49 @@ dat<- list(
   Pr = rep(Pr, 4), # Prompt type
   l_f = length(unique(A$f)),
   l_Pr = length(unique(Pr)),
-  l_A = length(U),
-  l_S = length(A$S)
+  l_e = length(U),
+  l_S = length(unique(A$S)),
+  l_a = length(unique(Ev[,1])) 
 )
 
-m.u <- ulam(
-  alist(
-    U ~ bernoulli(p),
-    logit(p) <- 
-      alpha_u_bar + 
-      zeta_u[A]*sigma_u_a + 
-      beta_u[P,f] + 
-      gamma_u[Pr]*sigma_u_Pr + 
-      delta_u[S]*sigma_u_S +
-      epsilon_u[f]*sigma_u_f,
-    
-    # adaptive priors - non-centered
-    transpars> matrix[P,l_f]:beta_u <-
-      compose_noncentered( sigma_u_P , L_Rho_u_P , z_u_P ),
-    matrix[l_f,P]:z_u_P ~ normal( 0 , 1 ),    
-    
-    # fixed priors
-    alpha_u_bar ~ normal(0,1.5),
-    zeta_u[A] ~ normal(0,1.5),
-    gamma_u[Pr] ~ normal(0,1.5),
-    delta_u[S] ~ normal(0,1.5),
-    epsilon_u[f] ~ normal(0,1.5),
-    sigma_u_a ~ dexp(1),
-    sigma_u_Pr ~ dexp(1),
-    sigma_u_S ~ dexp(1),
-    sigma_u_f ~ dexp(1),
-    vector[l_f]:sigma_u_P ~ dexp(1),
-    cholesky_factor_corr[l_f]:L_Rho_u_P ~ lkj_corr_cholesky( 2 ),
-    
-    # computing ordinary correlation matrix from Cholesky factors
-    gq> matrix[l_f,l_f]:Rho_u_P <<- multiply_lower_tri_self_transpose(L_Rho_u_P)
-    
-    ) , data = dat, chains = 4, cores = 8, cmdstan = TRUE, threads = 2) 
 
 # model written in stan 
 m <- cstan( file = 'scripts/mU_latA.stan', 
             data = dat, 
             chains = 4, 
             cores = 4, 
-            iter = 1000)
+            iter = 2000)
+
+dashboard(m)
+precis(m)
+par(mfrow = c ( 1, 1))
+
+post <- extract.samples(m)
+
+# ploting coefficients recovery
+lambdamean  <- vector()
+for (i in 1:800) lambdamean[i] <-  mean(post$lambda[,i])
+plot(log(lambda), lambdamean, 
+     main = 'Lambda parameter', 
+     xlab = 'True log(lambda)', 
+     ylab = 'Recovered log(lambda)')
+
+pmean  <- vector()
+for (i in 1:800) pmean[i] <-  mean(post$p[,i])
+plot(logit(p), pmean, 
+     main = 'p parameter', 
+     xlab = 'True logit(p)', 
+     ylab = 'Recovered logit(p)')
+
+
+A_link <- function( f, Pr, S){
+  sim_A <- with(post, {
+    beta_K[ , f]*sigma_K + gamma[ , Pr]*sigma_Pr + delta[ , S]*sigma_S})
+  return(mean(sim_A))
+}
+
+simA <- mapply(A_link, f = dat$f[1:200], Pr = dat$Pr[1:200], S = dat$S[1:200])
+plot(aA, simA, 
+     main = 'A parameter', 
+     xlab = 'True A', 
+     ylab = 'Recovered A')
