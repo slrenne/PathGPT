@@ -40,7 +40,6 @@ transformed parameters{
       mu[i] = mu[ i ] + beta_PF[P[i], f[i]];
     }
     
-    
     // model of usefulness 
     vector[l_e] p;
      for(i in 1:l_e) {

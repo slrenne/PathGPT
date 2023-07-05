@@ -2,14 +2,14 @@
 set.seed(230628)
 
 # analysis
-# let's create a vector for the promting strategy
+# let's create a vector for the prompting strategy
 Pr <-  as.factor(paste(A$Qt,A$Ref))
 levels(Pr) #  "1 1" "1 2" "2 1" "2 2"
 Pr <- as.integer(Pr)
 
 # let's start from the model of the
 dat<- list(
-  E = E,
+  E = E,       # number of errors
   U = U,       # usefulness
   A = Ev[,1],  # ID Answers
   P = Ev[,2],  # ID pathologist
@@ -33,11 +33,11 @@ m <- cstan( file = 'scripts/mU_latA.stan',
 
 dashboard(m)
 precis(m)
-par(mfrow = c ( 1, 1))
+par(mfrow = c ( 1, 1)) # resetting graphical parameters
 
-post <- extract.samples(m)
+post <- extract.samples(m) # extract the posterior
 
-# ploting coefficients recovery
+# plotting coefficients recovery
 lambdamean  <- vector()
 for (i in 1:800) lambdamean[i] <-  mean(post$lambda[,i])
 plot(log(lambda), lambdamean, 
