@@ -64,3 +64,13 @@ plot(aA, simA,
      main = 'A parameter', 
      xlab = 'True A', 
      ylab = 'Recovered A')
+
+# plot(N, xlim=c(0,10), ylim = c(2,2),
+#      xlab = 'Fields', ylab = 'K')
+
+plot(N, xlim=c(-2,2), ylim = c(0,1),
+     xlab = 'value', ylab = 'Density')
+
+for(i in 1:10) {
+dens(post$beta_K[,i], add = TRUE, col = i)
+abline(v=K[i], col = i)}
