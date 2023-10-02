@@ -21,8 +21,8 @@ A <- expand.grid(1:S, 1:Qt, 1:Ref) # combine the three variables
 A <- data.frame(A) #makes a df
 colnames(A) <- c('S', 'Qt', 'Ref') # retitle the column names
 A$f <- as.integer( trunc((A$S - 1)/5) + 1 ) # create also the fields
-
-K <- rnorm(f) # knowledge simulated for each field
+k_mean <- sample(1:10) - 5
+K <- rnorm(f, k_mean) # knowledge simulated for each field
 bS <- rnorm(S) # the effect of each scenario
 P_coeff <- rnorm(4) # Prompt coefficient
 P_coeff <- matrix(P_coeff, ncol =  2) # Prompt coefficient

@@ -65,12 +65,25 @@ plot(aA, simA,
      xlab = 'True A', 
      ylab = 'Recovered A')
 
-# plot(N, xlim=c(0,10), ylim = c(2,2),
-#      xlab = 'Fields', ylab = 'K')
+plot(N, ylim=c(-4.5,6), xlim = c(0.5,10.5),
+     xlab = 'Field', ylab = 'Density', xaxt = 'null', 
+     main = 'Latent Knowledge in each field')
+idx <- order(K)
+leg_text <- c('simulated','recovered')
+legend('bottomright', legend = leg_text, 
+       lwd = c(2,NA), pch = c(NA,23))
 
-plot(N, xlim=c(-2,2), ylim = c(0,1),
-     xlab = 'value', ylab = 'Density')
 
 for(i in 1:10) {
-dens(post$beta_K[,i], add = TRUE, col = i)
-abline(v=K[i], col = i)}
+y <- density(post$beta_K[,idx[i]] * post$sigma_K)$x
+x <- density(post$beta_K[,idx[i]] * post$sigma_K)$y
+polygon(i + x/2, y, col = scales::alpha(i,0.6), border = FALSE)
+lines(i + x/2, y, lwd = 1)
+polygon(i - x/2, y, col = scales::alpha(i,0.6), lwd = 2, border = FALSE)
+lines(i - x/2, y, lwd = 1)
+segments(x0 = i - 0.5,
+         x1 = i + 0.5,
+         y0 = K[idx[i]],
+         col = 1,
+         lwd = 2)
+}
