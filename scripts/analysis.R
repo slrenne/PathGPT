@@ -22,7 +22,7 @@ dat<- list(
   l_S = length(unique(A$S)),
   l_a = length(unique(Ev[,1])) 
 )
-
+dat$l_Pat <- length(unique(dat$P))
 
 # model written in stan 
 m <- cstan( file = 'scripts/mU_latA.stan', 

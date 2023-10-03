@@ -9,14 +9,21 @@ db <- read_sheet(url.db)
 
 str(db)
 
-
-
+# mean usefulness
+mean(as.integer(factor(db$`was the advice useful?`))-1)
+# number of errors 
+mean(db$`Total number of error`)
+round(proportions(table(db$`Total number of error`)),2)
+propo
+frequency()
+hist(db$`Total number of error`)
+hist
 
 # let's start from the model of the
 dat<- list(
   E = db$`Total number of error`,       # number of errors
   U = as.integer(
-    as.factor(db$`was the advice useful?`)),       # usefulness
+    as.factor(db$`was the advice useful?`)) - 1 ,       # usefulness
   A = db$`Question ID`,  # ID Answers
   P = as.integer(
     as.factor(db$`Email Address`)),  # ID pathologist
@@ -25,13 +32,14 @@ dat<- list(
   S = as.integer(
     as.factor(db$`Scenario ID`)),  # scenario ID
   Pr = as.integer(
-    as.factor(db$type)), # Prompt type
-  # l_f = length(unique(A$f)),
-  # l_Pr = length(unique(Pr)),
-  # l_e = length(U),
-  # l_S = length(unique(A$S)),
-  # l_a = length(unique(Ev[,1])) 
-)
+    as.factor(
+      paste(db$type,db$reference))))  # Prompt type
+dat$l_f <- length(unique(dat$f))
+dat$l_Pr <- length(unique(dat$Pr))
+dat$l_e <- length(dat$U)
+dat$l_S <- length(unique(dat$S))
+dat$l_a <- length(unique(dat$A)) 
+dat$l_Pat <- length(unique(dat$P))
 
 
 # model written in stan 
@@ -43,31 +51,45 @@ m <- cstan( file = 'scripts/mU_latA.stan',
 
 dashboard(m)
 precis(m)
+precis(m,2,pars = 'sigma_u_P')
 par(mfrow = c ( 1, 1)) # resetting graphical parameters
+plot(precis(m))
+plot(precis(m,2,pars = 'sigma_u_P'))
 
 post <- extract.samples(m) # extract the posterior
 
-# plotting coefficients recovery
-lambdamean  <- vector()
-for (i in 1:800) lambdamean[i] <-  mean(post$lambda[,i])
-plot(log(lambda), lambdamean, 
-     main = 'Lambda parameter', 
-     xlab = 'True log(lambda)', 
-     ylab = 'Recovered log(lambda)')
+# inspect the differences of the different 
+# strategies at parameter level 
+pic.size <- 2000
 
-pmean  <- vector()
-for (i in 1:800) pmean[i] <-  mean(post$p[,i])
-plot(logit(p), pmean, 
-     main = 'p parameter', 
-     xlab = 'True logit(p)', 
-     ylab = 'Recovered logit(p)')
+png('./figures/prompt_density.png', 
+    width = pic.size, height = pic.size, res = 300)
+plot(N, ylim = c(0,1.1), xlim = c(-1.5,1.5),
+     xlab = '', ylab = 'Density', 
+     main = 'Prompt modality')
+abline(v = 0, lty = 2)
+for (i in 1:4 ) dens(post$gamma[,i], col = i, lwd = 3, add = TRUE)
+levels( as.factor(paste(db$type,db$reference)))
+leg_text <- c('MC-NR', 'MC-R', 'OE-NR', 'OE-R')
+legend('topleft',legend = leg_text, lwd = 3, col = 1:4)
+dev.off()
 
-
-A_link <- function( f, Pr, S){
-  sim_A <- with(post, {
-    beta_K[ , f]*sigma_K + gamma[ , Pr]*sigma_Pr + delta[ , S]*sigma_S})
+U_link <- function( f, Pr, S){
+  U <- with(post, {
+    beta_K[ , f]*sigma_K })
   return(mean(sim_A))
 }
+
+
+
+plot(precis(m, 2, par = 'delta'))
+
+plot(precis(m, 3, par = 'beta_PF'))
+
+# the aim of the work is to assess the reliability 
+# in addressing pathological problems/questions
+
+
 
 simA <- mapply(A_link, f = dat$f[1:200], Pr = dat$Pr[1:200], S = dat$S[1:200])
 plot(aA, simA, 
@@ -75,25 +97,25 @@ plot(aA, simA,
      xlab = 'True A', 
      ylab = 'Recovered A')
 
-plot(N, ylim=c(-4.5,6), xlim = c(0.5,10.5),
-     xlab = 'Field', ylab = 'Density', xaxt = 'null', 
+idx <- order(colMeans(post$beta_K))
+
+png('./figures/latent_knowledge.png', 
+    width = pic.size, height = pic.size, res = 300)
+plot(N, ylim=c(-1.35,1.8), xlim = c(0.5,10.5),
+     xlab = '', ylab = 'Density', xaxt = 'null', 
      main = 'Latent Knowledge in each field')
-idx <- order(K)
-leg_text <- c('simulated','recovered')
-legend('bottomright', legend = leg_text, 
-       lwd = c(2,NA), pch = c(NA,23))
-
-
+abline(h = 0)
+s_factor <- 12 # scaling factor for graphics
 for(i in 1:10) {
   y <- density(post$beta_K[,idx[i]] * post$sigma_K)$x
   x <- density(post$beta_K[,idx[i]] * post$sigma_K)$y
-  polygon(i + x/2, y, col = scales::alpha(i,0.6), border = FALSE)
-  lines(i + x/2, y, lwd = 1)
-  polygon(i - x/2, y, col = scales::alpha(i,0.6), lwd = 2, border = FALSE)
-  lines(i - x/2, y, lwd = 1)
-  segments(x0 = i - 0.5,
-           x1 = i + 0.5,
-           y0 = K[idx[i]],
-           col = 1,
-           lwd = 2)
+  polygon(i + x/s_factor, y, col = scales::alpha(i,0.6), border = FALSE)
+  lines(i + x/s_factor, y, lwd = 1)
+  polygon(i - x/s_factor, y, col = scales::alpha(i,0.6), lwd = 2, border = FALSE)
+  lines(i - x/s_factor, y, lwd = 1)
 }
+axis(1, at = 1:10, labels = FALSE)
+text(x = 1:10 - 0.1, -1.7,
+     labels = levels(as.factor(db$Area))[idx],  
+     srt=45,  adj=1,    xpd=TRUE)
+dev.off()

@@ -5,6 +5,7 @@ data{
     int l_f; // length of the fiels
     int l_S; // length of the scenarios
     int l_a; // length of the answers
+    int l_Pat; // lenth of pathologist ID
     int P[l_e]; // Pathologist ID in evaluation
     int A[l_e]; // answer ID in evaluation
     int E[l_e]; // Error count ID in evaluation
@@ -22,7 +23,7 @@ parameters{
     real<lower=0> sigma_K;
     real<lower=0> sigma_Pr;
     real<lower=0> sigma_S;
-    matrix[l_f,4] z_u_P;
+    matrix[l_f,l_Pat] z_u_P;
     vector<lower=0>[l_f] sigma_u_P;
     cholesky_factor_corr[l_f] L_Rho_u_P;
 }
@@ -32,7 +33,7 @@ transformed parameters{
     mu =  beta_K[f]*sigma_K + gamma[Pr]*sigma_Pr + delta[S]*sigma_S;
     
     // VCV matrix pathology/field   
-    matrix[4,l_f] beta_PF;
+    matrix[l_Pat,l_f] beta_PF;
         beta_PF = (diag_pre_multiply(sigma_u_P, L_Rho_u_P) * z_u_P)';
     
     //moldel common to both GLMs
