@@ -101,21 +101,54 @@ idx <- order(colMeans(post$beta_K))
 
 png('./figures/latent_knowledge.png', 
     width = pic.size, height = pic.size, res = 300)
-plot(N, ylim=c(-1.35,1.8), xlim = c(0.5,10.5),
+plot(N, ylim=c(-1.6,2), xlim = c(0.5,10.5),
      xlab = '', ylab = 'Density', xaxt = 'null', 
      main = 'Latent Knowledge in each field')
 abline(h = 0)
-s_factor <- 12 # scaling factor for graphics
+s_factor <- 2 # scaling factor for graphics
 for(i in 1:10) {
-  y <- density(post$beta_K[,idx[i]] * post$sigma_K)$x
-  x <- density(post$beta_K[,idx[i]] * post$sigma_K)$y
+  y <- density(post$beta_K[,idx[i]])$x
+  x <- density(post$beta_K[,idx[i]])$y
   polygon(i + x/s_factor, y, col = scales::alpha(i,0.6), border = FALSE)
   lines(i + x/s_factor, y, lwd = 1)
   polygon(i - x/s_factor, y, col = scales::alpha(i,0.6), lwd = 2, border = FALSE)
   lines(i - x/s_factor, y, lwd = 1)
 }
 axis(1, at = 1:10, labels = FALSE)
-text(x = 1:10 - 0.1, -1.7,
+text(x = 1:10 - 0.1, -1.9,
      labels = levels(as.factor(db$Area))[idx],  
      srt=45,  adj=1,    xpd=TRUE)
+dev.off()
+
+
+
+# ten color colorblinf friendly 
+col <- c("#88CCEE","#CC6677","#DDCC77",
+         "#117733", "#332288", "#AA4499", 
+         "#44AA99", "#999933", "#882255", 
+         "#661100")
+
+field <- rep(1:10, each = 5 )
+idx <- order(colMeans(post$delta))
+y_text <- colMeans(post$delta)
+png('./figures/scenario_effect.png', 
+    width = pic.size*2, height = pic.size*1.4, res = 300)
+
+plot(N, ylim=c(-1.6,1.9), xlim = c(0.5,50.5),
+     xlab = '', ylab = 'Density', xaxt = 'null', 
+     main = 'Effect of scenarios')
+abline(h = 0)
+s_factor <- 4 # scaling factor for graphics
+for(i in 1:50) {
+  y <- density(post$delta[,idx[i]])$x
+  x <- density(post$delta[,idx[i]])$y
+  polygon(i + x/s_factor, y, col = scales::alpha(col[field[idx[i]]],0.6), border = FALSE)
+  lines(i + x/s_factor, y, lwd = 2)
+  polygon(i - x/s_factor, y, col = scales::alpha(col[field[idx[i]]],0.6), lwd = 2, border = FALSE)
+  lines(i - x/s_factor, y, lwd = 2)
+  text(i, y_text[idx[i]], labels = idx[i])
+}
+lab <- c('Soft', 'Breast', 'Endocrine', 'Hemolymph', 
+         'Uro', 'Gyn', 'GI', 'Thoracic', 'Skin', 'CNS')
+legend('topleft', pch = rep(16,10), col = col, legend = lab)
 dev.off()
