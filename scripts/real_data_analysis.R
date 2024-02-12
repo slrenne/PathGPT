@@ -58,44 +58,100 @@ plot(precis(m,2,pars = 'sigma_u_P'))
 
 post <- extract.samples(m) # extract the posterior
 
+plot(precis(m, 3, par = 'beta_PF'))
+
+# 
+# U_link <- function( f, Pr, S){
+#   U <- with(post, {
+#     beta_K[ , f]*sigma_K })
+#   return(mean(sim_A))
+# }
+
+A_link <- function( f, Pr, S){
+  sim_A <- with(post, {
+    beta_K[ , f]*sigma_K + gamma[ , Pr]*sigma_Pr + delta[ , S]*sigma_S})
+}
+
+l <- length(dat$E)
+simA <- mapply(A_link, f = dat$f[1:l], Pr = dat$Pr[1:l], S = dat$S[1:l])
+
+sim_p <- matrix(nrow = 4000, ncol = l)
+for(i in 1:l ) sim_p[,i] <- post$alpha_u + simA[,i]
+sim_p <- inv_logit(c(sim_p))
+l <- length(sim_p)
+sim_U <- rbern(l,sim_p)
+HPDI(sim_p)
+
+png('./figures/usefulness.png', 
+    width = pic.size, height = pic.size, res = 300)
+plot(N, ylim = c(- 0.1,2.5), xlim = c(0,1),
+     xlab = 'Probability', ylab = 'Density', 
+     main = 'Usefulness')
+abline(v = 0.5, lty = 2)
+dens(sim_p, lwd = 3, add = TRUE, adj = 1, col = 'red')
+useful <- data.frame(proportions(table(sim_U)))
+useful[,2] <- useful[,2] * 2.5
+for(i in 1:2) lines(i-1, useful[i,2], lwd=6, type = 'h')
+axis(4, at = c(0,1.25,2.5), labels = c("0","0.5", "1"))
+dev.off()
+
+### to check 
+
+sim_lambda <- matrix(nrow = 4000, ncol = l)
+for(i in 1:l ) sim_lambda[,i] <- post$alpha_e - simA[,i]
+sim_lambda <- exp(c(sim_lambda))
+l <- length(sim_lambda)
+sim_E <- rpois(l,sim_lambda)
+HPDI(sim_lambda)
+
+png('./figures/accuracy.png', 
+    width = pic.size, height = pic.size, res = 300)
+plot(N, ylim = c(0 ,0.5), xlim = c(0,20),
+     xlab = 'Probability', ylab = 'Density', 
+     main = 'Accuracy')
+dens(sim_lambda, lwd = 3, add = TRUE, adj = 1, col = 'red')
+errors <- data.frame(proportions(table(sim_E)))
+errors[,2] <- errors[,2] * 0.5
+for(i in 1:21) lines(i-1, errors[i,2], lwd=6, type = 'h')
+axis(4, at = c(0,0.25,.5), labels = c("0","0.5", "1"))
+dev.off()
+
+
+
+
+plot(dens(sim_p))
+str(sim_p)
+
 # inspect the differences of the different 
 # strategies at parameter level 
 pic.size <- 2000
 
+idx <- order(colMeans(post$gamma))
 png('./figures/prompt_density.png', 
     width = pic.size, height = pic.size, res = 300)
-plot(N, ylim = c(0,1.1), xlim = c(-1.5,1.5),
-     xlab = '', ylab = 'Density', 
-     main = 'Prompt modality')
-abline(v = 0, lty = 2)
-for (i in 1:4 ) dens(post$gamma[,i], col = i, lwd = 3, add = TRUE)
-levels( as.factor(paste(db$type,db$reference)))
-leg_text <- c('MC-NR', 'MC-R', 'OE-NR', 'OE-R')
-legend('topleft',legend = leg_text, lwd = 3, col = 1:4)
+s_factor <- 3.2 # scaling factor for graphics
+plot(N, ylim=c(-1.8,2.2), xlim = c(0.5,4.5),
+     xlab = '', ylab = 'Density', xaxt = 'null', 
+     main = 'Prompt Modality')
+abline(h = 0, lty = 2)
+for(i in 1:4) {
+  y <- density(post$gamma[,idx[i]])$x
+  x <- density(post$gamma[,idx[i]])$y
+  polygon(i + x/s_factor, y, col = scales::alpha(i,0.6), border = FALSE)
+  lines(i + x/s_factor, y, lwd = 1)
+  polygon(i - x/s_factor, y, col = scales::alpha(i,0.6), lwd = 2, border = FALSE)
+  lines(i - x/s_factor, y, lwd = 1)
+}
+levels( as.factor(paste(db$type,db$reference)))[idx]
+leg_text <- c( 'OE-R',  'OE-NR', 'MC-R', 'MC-NR')
+axis(1, 1:4, leg_text)
 dev.off()
 
-U_link <- function( f, Pr, S){
-  U <- with(post, {
-    beta_K[ , f]*sigma_K })
-  return(mean(sim_A))
-}
 
 
-
-plot(precis(m, 2, par = 'delta'))
-
-plot(precis(m, 3, par = 'beta_PF'))
 
 # the aim of the work is to assess the reliability 
 # in addressing pathological problems/questions
-
-
-
-simA <- mapply(A_link, f = dat$f[1:200], Pr = dat$Pr[1:200], S = dat$S[1:200])
-plot(aA, simA, 
-     main = 'A parameter', 
-     xlab = 'True A', 
-     ylab = 'Recovered A')
 
 idx <- order(colMeans(post$beta_K))
 

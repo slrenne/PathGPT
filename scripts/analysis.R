@@ -87,3 +87,4 @@ segments(x0 = i - 0.5,
          col = 1,
          lwd = 2)
 }
+

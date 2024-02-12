@@ -5,7 +5,7 @@ data{
     int l_f; // length of the fiels
     int l_S; // length of the scenarios
     int l_a; // length of the answers
-    int l_Pat; // lenth of pathologist ID
+    int l_Pat; // length of pathologist ID
     int P[l_e]; // Pathologist ID in evaluation
     int A[l_e]; // answer ID in evaluation
     int E[l_e]; // Error count ID in evaluation
